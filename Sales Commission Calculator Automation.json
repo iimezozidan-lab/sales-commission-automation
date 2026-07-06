@@ -1,0 +1,205 @@
+{
+  "name": "Sales Commission Calculator Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4a5a1de0-8c33-4596-8b6c-7a2d37922856",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\nconst totalSales = Number(item.json.total_sales);\n\nconst rate = Number(item.json.commission_rate);\n\nconst commission = (totalSales * rate) / 100;\n\nreturn {\n\njson: {\n\n...item.json,\n\ncommission\n\n}\n\n};\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "2a2f20d2-ebb8-4fb8-9290-80377b69d279",
+      "name": "Calculate Commission"
+    },
+    {
+      "parameters": {
+        "fromEmail": "iimezo.zidan@gmail.com",
+        "toEmail": "=iimezo.zidan@gmail.com",
+        "subject": "Monthly Sales Summary",
+        "html": "={{ $json.report }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "84a8e91f-2378-4820-8bb7-eb88b1c72ad6",
+      "name": "Management Report",
+      "webhookId": "0aae7c90-3d53-4714-bb5d-1d39e912d112",
+      "credentials": {
+        "smtp": {
+          "id": "7pi46DxFclgsYGGs",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sales",
+          "mode": "list",
+          "cachedResultName": "sales"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "7e259da0-fbc3-4c37-97b7-5517192948cc",
+      "name": "Get Sales Data",
+      "credentials": {
+        "postgres": {
+          "id": "nSUgRGci3y3lT3ME",
+          "name": "Postgres account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "iimezo.zidan@gmail.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Monthly Sales Commission Report",
+        "html": "=<h2>Monthly Commission Report</h2>\n\n<p>Hello <b>{{ $json.sales_rep }}</b>,</p>\n\n<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\">\n\n<tr>\n<td><b>Total Sales</b></td>\n<td>€ {{ $json.total_sales }}</td>\n</tr>\n\n<tr>\n<td><b>Commission Rate</b></td>\n<td>{{ $json.commission_rate }}%</td>\n</tr>\n\n<tr>\n<td><b>Your Commission</b></td>\n<td><b>€ {{ $json.commission }}</b></td>\n</tr>\n\n</table>\n\n<br>\n\n<p>Congratulations on your performance this month!</p>\n\n<p>Best Regards,<br>\nFinance Department</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        0
+      ],
+      "id": "d0d06431-af46-4245-9561-2e719e05be04",
+      "name": "Send Commission Report",
+      "webhookId": "5a5b85b2-7574-426f-87ff-56b0f0dbb8b3",
+      "credentials": {
+        "smtp": {
+          "id": "7pi46DxFclgsYGGs",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let html = `\n<h2>Monthly Sales Report</h2>\n\n<table border=\"1\" cellpadding=\"8\">\n<tr>\n<th>Sales Rep</th>\n<th>Total Sales</th>\n<th>Rate</th>\n<th>Commission</th>\n</tr>\n`;\n\nconst items = $('Calculate Commission').all();\nfor (const item of items) {\n  html += `\n<tr>\n<td>${item.json.sales_rep}</td>\n<td>€${item.json.total_sales}</td>\n<td>${item.json.commission_rate}%</td>\n<td>€${item.json.commission}</td>\n</tr>\n`;\n}\n\nhtml += \"</table>\";\n\nreturn [\n  {\n    json: {\n      report: html\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "af92bc6a-c874-408a-82e9-01702af150f6",
+      "name": "Generate Management Report"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Commission": {
+      "main": [
+        [
+          {
+            "node": "Send Commission Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Sales Data": {
+      "main": [
+        [
+          {
+            "node": "Calculate Commission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Commission Report": {
+      "main": [
+        [
+          {
+            "node": "Generate Management Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Management Report": {
+      "main": [
+        [
+          {
+            "node": "Management Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fe7279f9-8aa6-4238-b452-f240452bca4e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0d597bc4579aba1bf0928fff3ab18156d8247baa406ed8ad554e19f84e0a86ed"
+  },
+  "id": "fFjqJx0HKYrE6Xd3",
+  "tags": []
+}
